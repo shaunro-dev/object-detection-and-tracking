@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="AI-Based Robot Remote Detection and Retrieval System — Unified dashboard powered by custom YOLO models running live detection.">
+  <meta name="author" content="Team 14">
+  <title>🤖 Smart Robot Dashboard — YOLO Live Detection</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
+    crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <link rel="stylesheet" href="style.css">
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+
+<body>
+
+  <header>
+    <div class="header-brand">
+      <h1 id="main-title">
+        <i class="fa-solid fa-robot"></i> Smart Robot Dashboard
+        <span>YOLO Live Detection</span>
+      </h1>
+    </div>
+    <div class="header-status">
+      <div class="status-indicator">
+        <div id="connection-pulse" class="indicator-pulse disconnected"></div>
+        <span id="connection-status">CONNECTING...</span>
+      </div>
+      <div id="system-time">--:--:--</div>
+    </div>
+  </header>
+
+  <main class="dashboard-grid">
+
+    <section class="dashboard-card camera-card" id="camera-section">
+      <div class="card-header">
+        <h2 class="card-title">
+          <i class="fa-solid fa-video"></i> Live YOLO Camera Feed
+        </h2>
+        <div class="camera-recording-dot">
+          <div class="recording-dot"></div>
+          <span id="camera-source-label">YOLO LIVE</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="video-feed-container">
+          <img id="camera-stream" src="/video_feed" alt="Live YOLO Camera Feed"
+               style="width:100%;height:100%;object-fit:contain;display:block;">
+
+          <div class="camera-overlay">
+            <div class="overlay-row-top">
+              <div>CAM: FRONT_RGB_WIDE</div>
+              <div id="hud-resolution">1280x720 @ 30FPS</div>
+            </div>
+            <div class="camera-crosshairs"></div>
+            <div class="overlay-row-bottom">
+              <div id="hud-object-tag">TARGET: LOADING...</div>
+              <div id="hud-fps-val">FPS: --</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="dashboard-card status-card" id="status-section">
+      <div class="card-header">
+        <h2 class="card-title">
+          <i class="fa-solid fa-circle-info"></i> Telemetry &amp; YOLO Metrics
+        </h2>
+      </div>
+      <div class="card-body">
+        <div class="status-grid">
+
+          <div class="status-item">
+            <span class="status-item-label"><i class="fa-solid fa-arrows-spin"></i> Detection Mode</span>
+            <div class="status-item-value">
+              <span id="robot-status-badge" class="status-badge status-idle">Idle</span>
+            </div>
+          </div>
+
+          <div class="status-item">
+            <span class="status-item-label"><i class="fa-solid fa-gauge-high"></i> Inference FPS</span>
+            <div class="status-item-value" id="fps-text" style="color:var(--accent-green);">-- fps</div>
+          </div>
+
+          <div class="status-item">
+            <span class="status-item-label"><i class="fa-solid fa-bullseye"></i> Object Detected</span>
+            <div class="status-item-value" id="object-detected-text">No</div>
+          </div>
+
+          <div class="status-item">
+            <span class="status-item-label"><i class="fa-solid fa-tag"></i> Detected Label</span>
+            <div class="status-item-value" id="object-name-text">--</div>
+          </div>
+
+          <div class="status-item">
+            <span class="status-item-label"><i class="fa-solid fa-compass"></i> Position in Frame</span>
+            <div class="status-item-value" id="object-position-text">--</div>
+          </div>
+
+          <div class="status-item">
+            <span class="status-item-label"><i class="fa-solid fa-percent"></i> Confidence</span>
+            <div class="status-item-value" id="object-distance-text">--%</div>
+          </div>
+
+          <div class="status-item">
+            <span class="status-item-label"><i class="fa-solid fa-arrows-up-down-left-right"></i> Object Direction</span>
+            <div class="status-item-value" id="direction-text">---</div>
+          </div>
+
+          <div class="status-item">
+            <span class="status-item-label"><i class="fa-solid fa-bolt"></i> Object Speed</span>
+            <div class="status-item-value" id="speed-text">-- px/s</div>
+          </div>
+
+          <div class="status-item span-2">
+            <span class="status-item-label"><i class="fa-solid fa-terminal"></i> YOLO Detection Status</span>
+            <div class="action-box" id="action-box-container">
+              <div class="action-spinner"></div>
+              <span id="current-action-text">Initializing models...</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <section class="dashboard-card controls-card" id="controls-section">
+      <div class="card-header">
+        <h2 class="card-title"><i class="fa-solid fa-sliders"></i> Control Center</h2>
+      </div>
+      <div class="card-body controls-layout">
+
+        <div id="model-pills-container" style="display:flex;flex-wrap:wrap;gap:0.5rem;min-height:28px;"></div>
+
+        <div class="target-selection-container">
+          <div class="setting-row">
+            <span class="setting-label">
+              <i class="fa-solid fa-crosshairs" style="color: var(--accent-cyan);"></i> Detection Target:
+            </span>
+          </div>
+          <select id="target-object-select" class="dropdown-select" aria-label="Select Detection Target">
+            <option value="" id="opt-custom-placeholder" style="display:none;" disabled>✏️ Custom: --</option>
+            <option value="all" selected>🔍 All Objects (YOLO-World)</option>
+            <optgroup id="custom-models-group" label="── Custom Trained Models ──"></optgroup>
+            <optgroup label="── Common Objects ──">
+              <option value="remote">Remote Control</option>
+              <option value="cell phone">Cell Phone</option>
+              <option value="person">Person</option>
+              <option value="cup">Cup</option>
+              <option value="bottle">Bottle</option>
+              <option value="laptop">Laptop</option>
+              <option value="keyboard">Keyboard</option>
+              <option value="mouse">Mouse</option>
+              <option value="book">Book</option>
+              <option value="backpack">Backpack</option>
+              <option value="chair">Chair</option>
+              <option value="tv">TV / Monitor</option>
+            </optgroup>
+          </select>
+          <div class="setting-row" style="margin-top:0.75rem;">
+            <span class="setting-label">
+              <i class="fa-solid fa-keyboard" style="color: var(--accent-cyan);"></i>
+              Or enter custom target text (YOLO-World):
+            </span>
+          </div>
+          <input type="text" id="custom-target-input" class="text-input" placeholder="e.g. pen, calculator, ruler">
+          <button id="btn-apply-target" class="btn btn-start" style="margin-top:0.75rem;">
+            <i class="fa-solid fa-crosshairs"></i> Apply Target
+          </button>
+        </div>
+
+        <div class="simulation-settings">
+          <div class="setting-row">
+            <span class="setting-label"><i class="fa-solid fa-layer-group"></i> Objects in Frame</span>
+            <span id="obj-count-val" class="setting-value">0</span>
+          </div>
+          <div class="setting-row" style="margin-top:0.5rem;">
+            <span class="setting-label"><i class="fa-solid fa-microchip"></i> Detection Mode</span>
+            <span id="mode-val" class="setting-value">ALL</span>
+          </div>
+        </div>
+
+        <div class="manual-override">
+          <div style="font-size: 0.75rem; text-align: center; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.5rem; letter-spacing: 0.5px;">
+            Manual Override Pad
+          </div>
+          <div class="manual-control-pad">
+            <div class="empty-cell"></div>
+            <button id="pad-up" class="pad-btn" title="Move Forward"><i class="fa-solid fa-chevron-up"></i></button>
+            <div class="empty-cell"></div>
+            <button id="pad-left" class="pad-btn" title="Steer Left"><i class="fa-solid fa-chevron-left"></i></button>
+            <button id="pad-stop" class="pad-btn pad-stop" title="Emergency Pause"><i class="fa-solid fa-pause"></i></button>
+            <button id="pad-right" class="pad-btn" title="Steer Right"><i class="fa-solid fa-chevron-right"></i></button>
+            <div class="empty-cell"></div>
+            <button id="pad-down" class="pad-btn" title="Move Backward"><i class="fa-solid fa-chevron-down"></i></button>
+            <div class="empty-cell"></div>
+          </div>
+        </div>
+
+        <button id="btn-export" class="btn btn-reset">
+          <i class="fa-solid fa-download"></i> Export Event Logs
+        </button>
+
+      </div>
+    </section>
+
+    <section class="dashboard-card logs-card" id="logs-section">
+      <div class="card-header">
+        <h2 class="card-title"><i class="fa-solid fa-list-check"></i> System Event Logs</h2>
+        <div class="card-actions">
+          <button id="btn-clear-logs" class="btn btn-reset"
+            style="padding: 0.35rem 0.65rem; font-size: 0.75rem; border-radius: 6px;">
+            <i class="fa-solid fa-trash"></i> Clear
+          </button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="terminal-wrapper">
+          <div class="terminal-header">
+            <div class="terminal-dots">
+              <span class="terminal-dot dot-red"></span>
+              <span class="terminal-dot dot-yellow"></span>
+              <span class="terminal-dot dot-green"></span>
+            </div>
+            <span class="terminal-title">yolo_detection.log</span>
+          </div>
+          <div id="terminal-body-content" class="terminal-body" role="log" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>College Project Team 14 &bull; AI-Based Robot Remote Detection and Retrieval System &bull; Powered by YOLO + Flask</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,19 @@
+# Core YOLO + Vision
+opencv-python
+numpy
+torch
+torchvision
+ultralytics
+pillow
+tqdm
+
+# Web server
+flask
+flask-socketio
+python-engineio
+python-socketio
+
+# Optional: Public URL sharing via ngrok
+# Install this if you want to share the dashboard publicly:
+# pip install pyngrok
+imma final year student who created local first ai platform and im familiar with new ai models and tools , so im asking u for an 3 month internship opportunity to gain knowledge and learn new things with u. thank you

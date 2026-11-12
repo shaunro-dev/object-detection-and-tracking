@@ -1,0 +1,27 @@
+# virtual environments
+venv/
+.venv/
+env/
+
+# python
+__pycache__/
+*.pyc
+
+# model weights (large; ultralytics downloads the base ones automatically)
+*.pt
+
+# generated data
+*.db-journal
+dataset/
+yolo_dataset/
+daily_dataset/
+runs/
+custom_models/
+data.yaml
+daily_data.yaml
+
+# secrets and editor files
+.env
+*.key
+.vscode/
+*.log
